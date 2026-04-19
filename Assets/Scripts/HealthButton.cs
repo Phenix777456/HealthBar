@@ -3,8 +3,6 @@ using UnityEngine.UI;
 
 public sealed class HealthButton : MonoBehaviour
 {
-    public enum ButtonMode { Damage, Heal }
-
     [SerializeField] private Health _health;
     [SerializeField] private Button _button;
     [SerializeField] private ButtonMode _mode = ButtonMode.Damage;

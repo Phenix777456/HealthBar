@@ -1,16 +1,14 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 public sealed class HealthBarSlider : MonoBehaviour
 {
-    public enum DisplayMode { Smooth, Percent }
-
     [SerializeField] private Health _health;
     [SerializeField] private Slider _slider;
     [SerializeField] private TMP_Text _label;
-    [SerializeField] private DisplayMode _mode = DisplayMode.Smooth;
-    [SerializeField] private float _smoothTime = 0.3f;
+    [SerializeField] private float _smoothTime;
 
     private float _targetValue;
     private float _velocity;
@@ -18,13 +16,13 @@ public sealed class HealthBarSlider : MonoBehaviour
     private void OnEnable()
     {
         _health.HealthChanged += HandleHealthChanged;
-        _slider.value = _targetValue;
         RefreshLabel(_targetValue);
     }
 
     private void Start()
     {
-        _targetValue = NormalizedHealth(); 
+        _targetValue = NormalizedHealth();
+        StartCoroutine(ChangeHealth());
     }
 
     private void OnDisable()
@@ -32,18 +30,23 @@ public sealed class HealthBarSlider : MonoBehaviour
         _health.HealthChanged -= HandleHealthChanged;
     }
 
-    private void Update()
+    private IEnumerator ChangeHealth()
     {
-        if (Mathf.Approximately(_slider.value, _targetValue))
-            return;
+        while(Mathf.Approximately(_slider.value, _targetValue) == false)
+        {
+            _slider.value = Mathf.SmoothDamp(_slider.value, _targetValue, ref _velocity, _smoothTime);
+            RefreshLabel(_slider.value);
+            yield return null;
+        }
 
-        _slider.value = Mathf.SmoothDamp(_slider.value, _targetValue, ref _velocity, _smoothTime);
+        _slider.value = _targetValue;
         RefreshLabel(_slider.value);
     }
 
     private void HandleHealthChanged(float current, float max)
     {
         _targetValue = current / max;
+        StartCoroutine(ChangeHealth());
     }
 
     private void RefreshLabel(float normalized)
@@ -51,20 +54,11 @@ public sealed class HealthBarSlider : MonoBehaviour
         if (_label == null)
             return;
 
-        if (_mode == DisplayMode.Percent)
-        {
-            float percent = normalized * 100f;
-            int percentRounded = Mathf.RoundToInt(percent);
-            _label.text = percentRounded.ToString() + "%";
-        }
-        else
-        {
-            float currentHp = normalized * _health.Max;
-            float maxHp = _health.Max;
-            int currentRounded = Mathf.RoundToInt(currentHp);
-            int maxRounded = Mathf.RoundToInt(maxHp);
-            _label.text = currentRounded.ToString() + " / " + maxRounded.ToString();
-        }
+        float currentHp = normalized * _health.Max;
+        float maxHp = _health.Max;
+        int currentRounded = Mathf.RoundToInt(currentHp);
+        int maxRounded = Mathf.RoundToInt(maxHp);
+        _label.text = currentRounded.ToString() + " / " + maxRounded.ToString();
     }
 
     private float NormalizedHealth()
